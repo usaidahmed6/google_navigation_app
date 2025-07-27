@@ -7,7 +7,6 @@ A React Native CLI application that provides turn-by-turn navigation using Googl
 ### Core Features
 - 📍 **Google Places Autocomplete** for origin/destination selection
 - 🗺️ **Real-time Google Maps integration** with route visualization
-- 🧭 **Turn-by-turn navigation** with voice instructions
 - 📱 **Material Design UI** using react-native-paper
 - 📍 **Real-time location tracking** with high accuracy
 - ⏱️ **ETA and distance calculations**
@@ -18,7 +17,6 @@ A React Native CLI application that provides turn-by-turn navigation using Googl
 - 🔄 **Live rerouting support** - automatically recalculates route when user deviates
 - 🚗 **Current speed tracking** - displays real-time speed in km/h
 - 📏 **Distance to next turn** - shows precise distance to upcoming maneuver
-- 🔊 **Text-to-Speech** - voice navigation instructions
 - 🎨 **Modern UI** - beautiful gradient headers and smooth animations
 
 ## 📋 Prerequisites
@@ -86,10 +84,9 @@ npm run ios
 ### 3. Starting Navigation
 - Once both origin and destination are set, a route will be calculated
 - Tap the "Start Navigation" button to begin turn-by-turn navigation
-- The app will switch to navigation mode with voice instructions
+- The app will switch to navigation mode
 
 ### 4. Navigation Features
-- **Voice Instructions**: Turn-by-turn voice guidance
 - **Speed Display**: Real-time speed in the top-right corner
 - **Distance to Turn**: Shows distance to next maneuver
 - **Live Rerouting**: Automatically recalculates route if you deviate
@@ -110,7 +107,6 @@ The app is pre-configured with a Google Maps API key. If you need to use your ow
 
 ### Customization
 - **Theme**: Modify `src/theme/theme.ts` for custom colors
-- **Voice Language**: Change TTS language in `NavigationApp.tsx`
 - **Rerouting Threshold**: Adjust deviation threshold in `navigationService.ts`
 
 ## 📁 Project Structure
@@ -128,8 +124,7 @@ GOOGLE_NAVIGATION_APP/
 │   │   └── NavigationMapView.tsx
 │   ├── services/
 │   │   ├── directionsService.ts
-│   │   ├── navigationService.ts
-│   │   └── voiceGuidanceService.ts
+│   │   └── navigationService.ts
 │   ├── theme/
 │   │   └── theme.ts
 │   ├── types/
@@ -145,8 +140,7 @@ GOOGLE_NAVIGATION_APP/
 
 - 🌍 Origin and destination selection using **Google Places Autocomplete**.
 - 🗺️ Displays the calculated route on **Google Maps**.
-- 🧭 Starts **in-app turn-by-turn navigation** using **Google Navigation SDK for Android (v5+)**.
-- 🗣️ Implements **voice guidance**, **ETA**, **distance**, and **maneuver instructions**.
+- 🧭 Starts **in-app turn-by-turn navigation** using **Google Navigation SDK for Android (v5+)**. **ETA**, **distance**, and **maneuver instructions**.
 - 📍 Shows the user's **real-time location**.
 - 🔄 Supports **live rerouting**, **current speed tracking**, and **distance to next turn**.
 - 🧪 Developed using **functional components**, **React Hooks**, and **modular code** for readability.
@@ -161,6 +155,5 @@ GOOGLE_NAVIGATION_APP/
 
 ### Limitations
 - Requires internet connection for route calculation
-- Voice instructions in English only
 - Rerouting has 3-second delay to prevent excessive API calls
 - Speed accuracy depends on device GPS quality
