@@ -95,11 +95,6 @@ npm run ios
 - **Live Rerouting**: Automatically recalculates route if you deviate
 - **Stop Navigation**: Use the red "Stop Navigation" button to end
 
-### 5. Navigation Controls
-- **Back Button**: Pressing back during navigation will prompt to stop navigation
-- **Screen Orientation**: Automatically locks to portrait during navigation
-- **Keep Awake**: Screen stays on during navigation
-
 ## 🔧 Configuration
 
 ### Google Maps API Key
@@ -114,77 +109,47 @@ The app is pre-configured with a Google Maps API key. If you need to use your ow
 3. Replace the API key in `android/app/src/main/AndroidManifest.xml`
 
 ### Customization
-- **Theme**: Modify `src/theme/navigationTheme.ts` for custom colors
-- **Voice Language**: Change TTS language in `NavigationScreen.tsx`
-- **Rerouting Threshold**: Adjust deviation threshold in `NavigationService.ts`
+- **Theme**: Modify `src/theme/theme.ts` for custom colors
+- **Voice Language**: Change TTS language in `NavigationApp.tsx`
+- **Rerouting Threshold**: Adjust deviation threshold in `navigationService.ts`
 
 ## 📁 Project Structure
 
 ```
-src/
-├── components/          # Reusable UI components
-│   ├── LocationSearchInput.tsx
-│   ├── MapPreview.tsx
-│   ├── NavigationInstructions.tsx
-│   ├── NavigationStats.tsx
-│   ├── Speedometer.tsx
-│   └── ...
-├── screens/            # Main app screens
-│   ├── SearchScreen.tsx
-│   └── NavigationScreen.tsx
-├── services/           # API and business logic
-│   ├── NavigationService.ts
-│   └── directionsService.ts
-├── context/            # React Context for state management
-│   └── NavigationContext.tsx
-├── types/              # TypeScript type definitions
-│   └── navigation.ts
-└── theme/              # UI theme configuration
-    └── navigationTheme.ts
+GOOGLE_NAVIGATION_APP/
+├── android/
+├── ios/
+├── src/
+│   ├── components/
+│   │   ├── LocationInputs.tsx
+│   │   ├── MapView.tsx
+│   │   ├── NavigationControls.tsx
+│   │   ├── NavigationInstructions.tsx
+│   │   └── NavigationMapView.tsx
+│   ├── services/
+│   │   ├── directionsService.ts
+│   │   ├── navigationService.ts
+│   │   └── voiceGuidanceService.ts
+│   ├── theme/
+│   │   └── theme.ts
+│   ├── types/
+│   │   └── navigation.ts
+│   └── NavigationApp.tsx
+├── .eslintrc.js
+├── .gitignore
+├── .prettierrc.js
+├── .watchmanconfig
 ```
 
-## 🎯 Key Features Implementation
+## ✅ What I Implemented
 
-### Live Rerouting
-- Monitors user's position relative to planned route
-- Automatically detects deviations (>100m from route)
-- Recalculates route from current location to destination
-- Provides voice feedback during rerouting
-
-### Speed Tracking
-- Uses device GPS for real-time speed
-- Converts m/s to km/h for display
-- Updates navigation state with current speed
-- Displays in prominent speedometer component
-
-### Distance to Next Turn
-- Calculates precise distance to upcoming maneuver
-- Updates in real-time as user moves
-- Displays in navigation instructions
-- Triggers next instruction when approaching turn
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Location Permission Denied**
-   - Go to Settings > Apps > Navigation App > Permissions
-   - Enable "Location" permission
-
-2. **Maps Not Loading**
-   - Check internet connection
-   - Verify Google Maps API key is valid
-   - Ensure required APIs are enabled
-
-3. **Voice Instructions Not Working**
-   - Check device volume
-   - Verify TTS is enabled in device settings
-   - Restart the app
-
-4. **Route Calculation Fails**
-   - Check internet connection
-   - Verify origin and destination are valid
-   - Try different locations
+- 🌍 Origin and destination selection using **Google Places Autocomplete**.
+- 🗺️ Displays the calculated route on **Google Maps**.
+- 🧭 Starts **in-app turn-by-turn navigation** using **Google Navigation SDK for Android (v5+)**.
+- 🗣️ Implements **voice guidance**, **ETA**, **distance**, and **maneuver instructions**.
+- 📍 Shows the user's **real-time location**.
+- 🔄 Supports **live rerouting**, **current speed tracking**, and **distance to next turn**.
+- 🧪 Developed using **functional components**, **React Hooks**, and **modular code** for readability.
 
 ## 📝 Assumptions and Limitations
 
