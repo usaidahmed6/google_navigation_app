@@ -114,6 +114,20 @@ const NavigationMapView: React.FC<NavigationMapViewProps> = ({
     return "navigation"
   }
 
+  const handleRecenterLocation = () => {
+    if (currentLocation && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          latitudeDelta: 0.008,
+          longitudeDelta: 0.008,
+        },
+        500,
+      )
+    }
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar backgroundColor="#000000" barStyle="light-content" />
@@ -127,7 +141,7 @@ const NavigationMapView: React.FC<NavigationMapViewProps> = ({
         showsUserLocation={false}
         showsMyLocationButton={false}
         followsUserLocation={false}
-      {...({ showsTraffic: true } as any)} 
+        {...({ showsTraffic: true } as any)}
         showsBuildings={false}
         showsIndoors={false}
         mapType="standard"
@@ -246,13 +260,8 @@ const NavigationMapView: React.FC<NavigationMapViewProps> = ({
       {/* Control Buttons - Bottom Right */}
       <View style={styles.controlButtons}>
         {/* Recenter Button */}
-        <TouchableOpacity style={styles.controlButton}>
+        <TouchableOpacity style={styles.controlButton} onPress={handleRecenterLocation}>
           <Icon name="my-location" size={20} color="#5F6368" />
-        </TouchableOpacity>
-
-        {/* Volume Button */}
-        <TouchableOpacity style={styles.controlButton}>
-          <Icon name="volume-up" size={20} color="#5F6368" />
         </TouchableOpacity>
       </View>
     </View>

@@ -12,7 +12,6 @@ import NavigationControls from "./components/NavigationControls"
 import NavigationMapView from "./components/NavigationMapView"
 import type { LocationData, RouteData, NavigationState } from "./types/navigation"
 import { navigationService } from "./services/navigationService"
-import { voiceGuidanceService } from "./services/voiceGuidanceService"
 
 const NavigationApp: React.FC = () => {
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null)
@@ -92,16 +91,6 @@ const NavigationApp: React.FC = () => {
           if (navigationService.checkForRerouting(newLocation, route.steps)) {
             console.log("Rerouting triggered")
             // In a real app, you would recalculate the route here
-          }
-
-          // Voice guidance
-          const currentStep = navigationService.getCurrentStep()
-          if (currentStep && navState.distanceToNextTurn) {
-            voiceGuidanceService.announceInstruction(
-              currentStep,
-              navState.currentStepIndex,
-              navState.distanceToNextTurn,
-            )
           }
         }
 
@@ -234,14 +223,12 @@ const NavigationApp: React.FC = () => {
               },
               onNavigationComplete: () => {
                 setIsNavigating(false)
-                voiceGuidanceService.announceNavigationComplete()
                 Alert.alert("Navigation Complete", "You have arrived at your destination!")
               },
               onReroute: (newRoute) => {
-                voiceGuidanceService.announceRerouting()
+                console.log("Route recalculated")
               },
             })
-            voiceGuidanceService.announceNavigationStart()
           },
         },
       ])
@@ -253,7 +240,6 @@ const NavigationApp: React.FC = () => {
   const handleStopNavigation = () => {
     setIsNavigating(false)
     navigationService.stopNavigation()
-    voiceGuidanceService.reset()
     setNavigationState({
       isNavigating: false,
       currentStepIndex: 0,
