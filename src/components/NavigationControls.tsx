@@ -1,6 +1,6 @@
 import type React from "react"
-import { View, StyleSheet } from "react-native"
-import { Card, Button, Text, Chip } from "react-native-paper"
+import { View, StyleSheet, TouchableOpacity } from "react-native"
+import { Text } from "react-native-paper"
 import Icon from "react-native-vector-icons/MaterialIcons"
 import type { RouteData } from "../types/navigation"
 
@@ -26,7 +26,7 @@ const NavigationControls: React.FC<NavigationControlsProps> = ({
     if (hours > 0) {
       return `${hours}h ${minutes}m`
     }
-    return `${minutes}m`
+    return `${minutes} min`
   }
 
   const formatDistance = (meters: number): string => {
@@ -36,127 +36,121 @@ const NavigationControls: React.FC<NavigationControlsProps> = ({
     return `${meters} m`
   }
 
+  if (!route) {
+    return null
+  }
+
   return (
-    <Card style={styles.card}>
-      <Card.Content>
-        {route && (
-          <View style={styles.routeInfo}>
-            <Text variant="titleSmall" style={styles.routeTitle}>
-              Route Information
-            </Text>
-            <View style={styles.routeStats}>
-              <Chip icon="clock-outline" style={styles.chip}>
-                {formatDuration(route.duration)}
-              </Chip>
-              <Chip icon="map-marker-distance" style={styles.chip}>
-                {formatDistance(route.distance)}
-              </Chip>
+    <View style={styles.container}>
+      {/* Route Options */}
+      <View style={styles.routeOptions}>
+        <View style={styles.routeOption}>
+          <View style={styles.routeHeader}>
+            <View style={styles.routeBadge}>
+              <Icon name="directions-car" size={16} color="#ffffff" />
             </View>
-
-            {isNavigating && (
-              <View style={styles.navigationInfo}>
-                <Icon name="navigation" size={20} color="#2e7d32" />
-                <Text variant="titleSmall" style={styles.navigationText}>
-                  Navigation Active
-                </Text>
-              </View>
-            )}
+            <View style={styles.routeInfo}>
+              <Text style={styles.routeTime}>{formatDuration(route.duration)}</Text>
+              <Text style={styles.routeDistance}>{formatDistance(route.distance)}</Text>
+            </View>
+            <Text style={styles.routeLabel}>Fastest route</Text>
           </View>
-        )}
-
-        <View style={styles.buttonContainer}>
-          {!isNavigating ? (
-            <Button
-              mode="contained"
-              onPress={onStartNavigation}
-              disabled={!canStartNavigation}
-              style={[styles.button, canStartNavigation ? styles.startButton : styles.disabledButton]}
-              contentStyle={styles.buttonContent}
-              icon={({ size, color }) => <Icon name="navigation" size={size} color={color} />}
-            >
-              Start Navigation
-            </Button>
-          ) : (
-            <Button
-              mode="contained"
-              onPress={onStopNavigation}
-              style={[styles.button, styles.stopButton]}
-              contentStyle={styles.buttonContent}
-              icon={({ size, color }) => <Icon name="stop" size={size} color={color} />}
-            >
-              Stop Navigation
-            </Button>
-          )}
         </View>
+      </View>
 
-        {!canStartNavigation && (
-          <Text variant="bodySmall" style={styles.helpText}>
-            {!route ? "Select origin and destination to calculate route" : "Route ready - tap Start Navigation"}
-          </Text>
-        )}
-      </Card.Content>
-    </Card>
+      {/* Start Navigation Button */}
+      <TouchableOpacity
+        style={[styles.startButton, !canStartNavigation && styles.disabledButton]}
+        onPress={onStartNavigation}
+        disabled={!canStartNavigation}
+      >
+        <Icon name="navigation" size={24} color="#ffffff" />
+        <Text style={styles.startButtonText}>Start</Text>
+      </TouchableOpacity>
+
+      {/* Additional Options */}
+      <View style={styles.additionalOptions}>
+        <TouchableOpacity style={styles.optionButton}>
+          <Icon name="more-vert" size={24} color="#5F6368" />
+        </TouchableOpacity>
+      </View>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  card: {
-    margin: 16,
-    elevation: 4,
+  container: {
     backgroundColor: "#ffffff",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#E8EAED",
   },
-  routeInfo: {
+  routeOptions: {
     marginBottom: 16,
   },
-  routeTitle: {
-    marginBottom: 12,
-    fontWeight: "bold",
-    color: "#212121",
+  routeOption: {
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: "#4285F4",
   },
-  routeStats: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 12,
-  },
-  chip: {
-    backgroundColor: "#e3f2fd",
-  },
-  navigationInfo: {
+  routeHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e8f5e8",
-    padding: 12,
-    borderRadius: 8,
-    justifyContent: "center",
   },
-  navigationText: {
-    color: "#2e7d32",
+  routeBadge: {
+    backgroundColor: "#4285F4",
+    borderRadius: 12,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  routeInfo: {
+    flex: 1,
+  },
+  routeTime: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#3C4043",
+  },
+  routeDistance: {
+    fontSize: 14,
+    color: "#5F6368",
+    marginTop: 2,
+  },
+  routeLabel: {
+    fontSize: 12,
+    color: "#4285F4",
+    fontWeight: "500",
+  },
+  startButton: {
+    backgroundColor: "#4285F4",
+    borderRadius: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    marginBottom: 12,
+  },
+  disabledButton: {
+    backgroundColor: "#E8EAED",
+  },
+  startButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
     fontWeight: "bold",
     marginLeft: 8,
   },
-  buttonContainer: {
-    marginBottom: 8,
+  additionalOptions: {
+    alignItems: "center",
   },
-  button: {
-    borderRadius: 12,
-  },
-  buttonContent: {
-    paddingVertical: 12,
-  },
-  startButton: {
-    backgroundColor: "#4CAF50",
-  },
-  stopButton: {
-    backgroundColor: "#f44336",
-  },
-  disabledButton: {
-    backgroundColor: "#cccccc",
-  },
-  helpText: {
-    textAlign: "center",
-    color: "#666",
-    fontStyle: "italic",
-    marginTop: 8,
+  optionButton: {
+    padding: 8,
   },
 })
 

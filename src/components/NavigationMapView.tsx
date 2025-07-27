@@ -2,8 +2,8 @@
 
 import type React from "react"
 import { useRef, useEffect, useState } from "react"
-import { StyleSheet, View, TouchableOpacity, Dimensions } from "react-native"
-import { Text, Card } from "react-native-paper"
+import { StyleSheet, View, TouchableOpacity, Dimensions, StatusBar } from "react-native"
+import { Text } from "react-native-paper"
 import MapViewComponent, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps"
 import Icon from "react-native-vector-icons/MaterialIcons"
 import type { LocationData, RouteData, RouteStep } from "../types/navigation"
@@ -39,21 +39,45 @@ const NavigationMapView: React.FC<NavigationMapViewProps> = ({
 }) => {
   const mapRef = useRef<MapViewComponent>(null)
   const [mapReady, setMapReady] = useState(false)
+  const [remainingTime, setRemainingTime] = useState("")
+  const [remainingDistance, setRemainingDistance] = useState("")
 
   useEffect(() => {
     if (isNavigating && currentLocation && mapRef.current && mapReady) {
-      // Center map on current location during navigation with appropriate zoom
       mapRef.current.animateToRegion(
         {
           latitude: currentLocation.latitude,
           longitude: currentLocation.longitude,
-          latitudeDelta: 0.005, // Closer zoom for navigation
-          longitudeDelta: 0.005,
+          latitudeDelta: 0.008,
+          longitudeDelta: 0.008,
         },
-        1000,
+        500,
       )
     }
   }, [currentLocation, isNavigating, mapReady])
+
+  useEffect(() => {
+    if (route) {
+      // Calculate remaining time and distance
+      const avgSpeed = currentSpeed > 5 ? currentSpeed : 40 // Default 40 km/h
+      const timeInHours = route.distance / 1000 / avgSpeed
+      const timeInMinutes = Math.round(timeInHours * 60)
+
+      if (timeInMinutes >= 60) {
+        const hours = Math.floor(timeInMinutes / 60)
+        const mins = timeInMinutes % 60
+        setRemainingTime(`${hours}h ${mins}m`)
+      } else {
+        setRemainingTime(`${timeInMinutes} min`)
+      }
+
+      if (route.distance >= 1000) {
+        setRemainingDistance(`${(route.distance / 1000).toFixed(1)} km`)
+      } else {
+        setRemainingDistance(`${Math.round(route.distance)} m`)
+      }
+    }
+  }, [route, currentSpeed])
 
   const getInitialRegion = () => {
     if (currentLocation) {
@@ -85,27 +109,38 @@ const NavigationMapView: React.FC<NavigationMapViewProps> = ({
     if (lowerInstruction.includes("right")) return "turn-right"
     if (lowerInstruction.includes("straight") || lowerInstruction.includes("continue")) return "straight"
     if (lowerInstruction.includes("u-turn")) return "u-turn-left"
+    if (lowerInstruction.includes("merge")) return "merge"
+    if (lowerInstruction.includes("exit")) return "exit-to-app"
     return "navigation"
   }
 
   return (
     <View style={styles.container}>
+      <StatusBar backgroundColor="#000000" barStyle="light-content" />
+
       {/* Full Screen Map */}
       <MapViewComponent
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
         initialRegion={getInitialRegion()}
-        showsUserLocation={false} // We'll show custom marker
+        showsUserLocation={false}
         showsMyLocationButton={false}
-        followsUserLocation={false} // We handle this manually
-        showsTraffic={true}
-        showsBuildings={true}
-        showsIndoors={true}
+        followsUserLocation={false}
+      {...({ showsTraffic: true } as any)} 
+        showsBuildings={false}
+        showsIndoors={false}
         mapType="standard"
         onMapReady={() => setMapReady(true)}
+        customMapStyle={[
+          {
+            featureType: "poi",
+            elementType: "labels",
+            stylers: [{ visibility: "off" }],
+          },
+        ]}
       >
-        {/* Current Location Marker with Direction */}
+        {/* Current Location Marker */}
         {currentLocation && (
           <Marker
             coordinate={{
@@ -116,6 +151,7 @@ const NavigationMapView: React.FC<NavigationMapViewProps> = ({
             rotation={currentLocation.heading || 0}
           >
             <View style={styles.currentLocationMarker}>
+              <View style={styles.locationPulse} />
               <View style={styles.locationDot} />
               <View style={styles.directionArrow} />
             </View>
@@ -129,11 +165,11 @@ const NavigationMapView: React.FC<NavigationMapViewProps> = ({
               latitude: destination.latitude,
               longitude: destination.longitude,
             }}
-            title="Destination"
-            description={destination.address}
           >
             <View style={styles.destinationMarker}>
-              <Icon name="place" size={30} color="#ffffff" />
+              <View style={styles.destinationPin}>
+                <Icon name="place" size={20} color="#ffffff" />
+              </View>
             </View>
           </Marker>
         )}
@@ -142,86 +178,83 @@ const NavigationMapView: React.FC<NavigationMapViewProps> = ({
         {route && (
           <Polyline
             coordinates={route.coordinates}
-            strokeColor="#007AFF"
-            strokeWidth={6}
+            strokeColor="#4285F4"
+            strokeWidth={8}
             lineCap="round"
             lineJoin="round"
           />
         )}
       </MapViewComponent>
 
-      {/* Top Navigation Info Panel */}
-      <View style={styles.topPanel}>
-        <Card style={styles.navigationCard}>
-          <Card.Content style={styles.navigationContent}>
-            {currentStep && (
-              <View style={styles.currentInstruction}>
+      {/* Compact Navigation Instruction Card - Top */}
+      <View style={styles.topInstructionCard}>
+        <TouchableOpacity style={styles.menuButton}>
+          <Icon name="menu" size={20} color="#5F6368" />
+        </TouchableOpacity>
+
+        <View style={styles.instructionContent}>
+          {currentStep && (
+            <>
+              <View style={styles.mainInstruction}>
+                <Text style={styles.distanceText}>{formatDistance(distanceToNextTurn)}</Text>
                 <View style={styles.instructionRow}>
-                  <Icon name={getInstructionIcon(currentStep.instruction)} size={32} color="#007AFF" />
-                  <View style={styles.instructionDetails}>
-                    <Text variant="titleMedium" style={styles.instructionText}>
-                      {currentStep.instruction}
-                    </Text>
-                    <Text variant="bodyMedium" style={styles.distanceText}>
-                      in {formatDistance(distanceToNextTurn)}
-                    </Text>
-                  </View>
+                  <Icon name={getInstructionIcon(currentStep.instruction)} size={20} color="#1976D2" />
+                  <Text style={styles.instructionText} numberOfLines={1}>
+                    {currentStep.instruction}
+                  </Text>
                 </View>
               </View>
-            )}
-          </Card.Content>
-        </Card>
-      </View>
 
-      {/* Bottom Speed and ETA Panel */}
-      <View style={styles.bottomPanel}>
-        <Card style={styles.speedCard}>
-          <Card.Content style={styles.speedContent}>
-            <View style={styles.speedInfo}>
-              <View style={styles.speedSection}>
-                <Text variant="headlineMedium" style={styles.speedValue}>
-                  {Math.round(currentSpeed)}
-                </Text>
-                <Text variant="bodySmall" style={styles.speedUnit}>
-                  km/h
-                </Text>
-              </View>
-              <View style={styles.etaSection}>
-                <Text variant="bodySmall" style={styles.etaLabel}>
-                  ETA
-                </Text>
-                <Text variant="titleLarge" style={styles.etaValue}>
-                  {eta}
-                </Text>
-              </View>
-            </View>
-          </Card.Content>
-        </Card>
-      </View>
-
-      {/* Stop Navigation Button */}
-      <TouchableOpacity style={styles.stopButton} onPress={onStopNavigation}>
-        <Icon name="close" size={24} color="#ffffff" />
-      </TouchableOpacity>
-
-      {/* Next Steps Preview (if available) */}
-      {nextSteps.length > 0 && (
-        <View style={styles.nextStepsPanel}>
-          <Card style={styles.nextStepsCard}>
-            <Card.Content style={styles.nextStepsContent}>
-              <Text variant="bodySmall" style={styles.nextStepsTitle}>
-                Then:
-              </Text>
-              <View style={styles.nextStepItem}>
-                <Icon name={getInstructionIcon(nextSteps[0].instruction)} size={16} color="#666" />
-                <Text variant="bodySmall" style={styles.nextStepText} numberOfLines={1}>
-                  {nextSteps[0].instruction}
-                </Text>
-              </View>
-            </Card.Content>
-          </Card>
+              {/* Next Step Preview */}
+              {nextSteps.length > 0 && (
+                <View style={styles.nextStepRow}>
+                  <Icon name="refresh" size={14} color="#5F6368" />
+                  <Text style={styles.nextStepText} numberOfLines={1}>
+                    Then {nextSteps[0].instruction.toLowerCase()}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
         </View>
-      )}
+
+        <TouchableOpacity onPress={onStopNavigation} style={styles.closeButton}>
+          <Icon name="close" size={20} color="#5F6368" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Compact Route Info Card */}
+      <View style={styles.routeInfoCard}>
+        <View style={styles.routeInfoItem}>
+          <Text style={styles.routeInfoValue}>{remainingTime}</Text>
+          <Text style={styles.routeInfoLabel}>ETA</Text>
+        </View>
+        <View style={styles.routeInfoItem}>
+          <Text style={styles.routeInfoValue}>{remainingDistance}</Text>
+          <Text style={styles.routeInfoLabel}>remaining</Text>
+        </View>
+      </View>
+
+      {/* Speed Display - Bottom Left */}
+      <View style={styles.speedContainer}>
+        <View style={styles.speedCard}>
+          <Text style={styles.speedValue}>{Math.round(currentSpeed)}</Text>
+          <Text style={styles.speedUnit}>km/h</Text>
+        </View>
+      </View>
+
+      {/* Control Buttons - Bottom Right */}
+      <View style={styles.controlButtons}>
+        {/* Recenter Button */}
+        <TouchableOpacity style={styles.controlButton}>
+          <Icon name="my-location" size={20} color="#5F6368" />
+        </TouchableOpacity>
+
+        {/* Volume Button */}
+        <TouchableOpacity style={styles.controlButton}>
+          <Icon name="volume-up" size={20} color="#5F6368" />
+        </TouchableOpacity>
+      </View>
     </View>
   )
 }
@@ -229,6 +262,7 @@ const NavigationMapView: React.FC<NavigationMapViewProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#000000",
   },
   map: {
     flex: 1,
@@ -239,162 +273,190 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  locationPulse: {
+    position: "absolute",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(66, 133, 244, 0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(66, 133, 244, 0.3)",
+  },
   locationDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#007AFF",
-    borderWidth: 3,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#4285F4",
+    borderWidth: 2,
     borderColor: "#ffffff",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowRadius: 2,
+    elevation: 4,
   },
   directionArrow: {
     position: "absolute",
-    top: -2,
+    top: -3,
     width: 0,
     height: 0,
-    borderLeftWidth: 4,
-    borderRightWidth: 4,
-    borderBottomWidth: 8,
+    borderLeftWidth: 3,
+    borderRightWidth: 3,
+    borderBottomWidth: 6,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderBottomColor: "#007AFF",
+    borderBottomColor: "#4285F4",
   },
   destinationMarker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FF3B30",
+    alignItems: "center",
+  },
+  destinationPin: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#EA4335",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowRadius: 4,
+    elevation: 6,
   },
-  topPanel: {
+  topInstructionCard: {
     position: "absolute",
-    top: 50,
+    top: 40,
     left: 16,
     right: 16,
-  },
-  navigationCard: {
-    elevation: 8,
     backgroundColor: "#ffffff",
-  },
-  navigationContent: {
-    paddingVertical: 16,
-  },
-  currentInstruction: {
+    borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 8,
+    maxHeight: 80,
+  },
+  menuButton: {
+    padding: 4,
+    marginRight: 8,
+  },
+  instructionContent: {
+    flex: 1,
+  },
+  mainInstruction: {
+    marginBottom: 4,
+  },
+  distanceText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1976D2",
+    marginBottom: 2,
   },
   instructionRow: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
-  },
-  instructionDetails: {
-    marginLeft: 16,
-    flex: 1,
   },
   instructionText: {
-    fontWeight: "bold",
-    color: "#000",
-    marginBottom: 4,
+    fontSize: 14,
+    color: "#3C4043",
+    marginLeft: 8,
+    flex: 1,
   },
-  distanceText: {
-    color: "#007AFF",
-    fontWeight: "600",
-  },
-  bottomPanel: {
-    position: "absolute",
-    bottom: 30,
-    left: 16,
-    right: 16,
-  },
-  speedCard: {
-    elevation: 8,
-    backgroundColor: "#000000",
-  },
-  speedContent: {
-    paddingVertical: 12,
-  },
-  speedInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  speedSection: {
-    alignItems: "center",
-  },
-  speedValue: {
-    color: "#00FF00",
-    fontWeight: "bold",
-    fontFamily: "monospace",
-  },
-  speedUnit: {
-    color: "#ffffff",
-    marginTop: 4,
-  },
-  etaSection: {
-    alignItems: "center",
-  },
-  etaLabel: {
-    color: "#ffffff",
-    marginBottom: 4,
-  },
-  etaValue: {
-    color: "#ffffff",
-    fontWeight: "bold",
-    fontFamily: "monospace",
-  },
-  stopButton: {
-    position: "absolute",
-    top: 60,
-    right: 16,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#FF3B30",
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
-  nextStepsPanel: {
-    position: "absolute",
-    top: 140,
-    left: 16,
-    right: 16,
-  },
-  nextStepsCard: {
-    elevation: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-  },
-  nextStepsContent: {
-    paddingVertical: 8,
-  },
-  nextStepsTitle: {
-    color: "#666",
-    marginBottom: 4,
-  },
-  nextStepItem: {
+  nextStepRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 2,
   },
   nextStepText: {
-    marginLeft: 8,
-    color: "#333",
+    fontSize: 12,
+    color: "#5F6368",
+    marginLeft: 6,
     flex: 1,
+  },
+  closeButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  routeInfoCard: {
+    position: "absolute",
+    top: 130,
+    left: 16,
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    flexDirection: "row",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 4,
+  },
+  routeInfoItem: {
+    alignItems: "center",
+    marginRight: 16,
+  },
+  routeInfoValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#3C4043",
+  },
+  routeInfoLabel: {
+    fontSize: 10,
+    color: "#5F6368",
+    marginTop: 1,
+  },
+  speedContainer: {
+    position: "absolute",
+    bottom: 100,
+    left: 16,
+  },
+  speedCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 30,
+    width: 60,
+    height: 60,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  speedValue: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#3C4043",
+  },
+  speedUnit: {
+    fontSize: 10,
+    color: "#5F6368",
+    marginTop: 1,
+  },
+  controlButtons: {
+    position: "absolute",
+    bottom: 100,
+    right: 16,
+  },
+  controlButton: {
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 4,
   },
 })
 

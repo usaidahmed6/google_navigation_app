@@ -1,7 +1,8 @@
-import React, {useRef, useEffect} from 'react';
-import {StyleSheet, View} from 'react-native';
-import MapViewComponent, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
-import {LocationData, RouteData} from '../types/navigation';
+import React, { useRef, useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
+import MapViewComponent, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+
+import { LocationData, RouteData } from '../types/navigation';
 
 interface MapViewProps {
   currentLocation: LocationData | null;
@@ -26,7 +27,7 @@ const MapView: React.FC<MapViewProps> = ({
       const coordinates = route.coordinates;
       if (coordinates.length > 0) {
         mapRef.current.fitToCoordinates(coordinates, {
-          edgePadding: {top: 50, right: 50, bottom: 50, left: 50},
+          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
           animated: true,
         });
       }
@@ -56,11 +57,12 @@ const MapView: React.FC<MapViewProps> = ({
     }
     // Default to a general location if no current location
     return {
-      latitude: 37.78825,
-      longitude: -122.4324,
+      latitude: 24.8607,
+      longitude: 67.0011,
       latitudeDelta: 0.0922,
       longitudeDelta: 0.0421,
     };
+
   };
 
   return (
@@ -73,7 +75,7 @@ const MapView: React.FC<MapViewProps> = ({
         showsUserLocation={true}
         showsMyLocationButton={true}
         followsUserLocation={isNavigating}
-        showsTraffic={true}
+       {...({ showsTraffic: true } as any)} 
       >
         {/* Current Location Marker */}
         {currentLocation && (

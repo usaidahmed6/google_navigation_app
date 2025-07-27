@@ -2,8 +2,8 @@
 
 import type React from "react"
 import { useState, useCallback, useEffect } from "react"
-import { View, StyleSheet, TouchableOpacity, Alert, TextInput } from "react-native"
-import { Card, Text, ActivityIndicator, Button } from "react-native-paper"
+import { View, StyleSheet, TouchableOpacity, Alert, TextInput, ScrollView } from "react-native"
+import { Text, ActivityIndicator } from "react-native-paper"
 import Icon from "react-native-vector-icons/MaterialIcons"
 import type { LocationData, RouteData } from "../types/navigation"
 import { calculateRoute } from "../services/directionsService"
@@ -11,8 +11,8 @@ import { calculateRoute } from "../services/directionsService"
 interface LocationInputsProps {
   origin: LocationData | null
   destination: LocationData | null
-  onOriginSelect: (location: LocationData) => void
-  onDestinationSelect: (location: LocationData) => void
+  onOriginSelect: (location: LocationData | null) => void
+  onDestinationSelect: (location: LocationData | null) => void
   onRouteCalculated: (route: RouteData) => void
   currentLocation: LocationData | null
 }
@@ -141,7 +141,6 @@ const LocationInputs: React.FC<LocationInputsProps> = ({
       try {
         const route = await calculateRoute(originLoc, destLoc)
         onRouteCalculated(route)
-        Alert.alert("Route Found", "Route calculated successfully! You can now start navigation.")
       } catch (error) {
         console.log("Route calculation error:", error)
         Alert.alert("Route Error", "Failed to calculate route. Please try again.")
@@ -153,7 +152,7 @@ const LocationInputs: React.FC<LocationInputsProps> = ({
 
   const handleUseCurrentLocation = () => {
     if (currentLocation) {
-      setOriginText("Current Location")
+      setOriginText("Your location")
       onOriginSelect(currentLocation)
       setShowOriginSuggestions(false)
     } else {
@@ -163,7 +162,6 @@ const LocationInputs: React.FC<LocationInputsProps> = ({
 
   const handleSwapLocations = () => {
     if (origin && destination) {
-      // Swap the locations
       const tempOrigin = originText
       const tempDestination = destinationText
 
@@ -201,273 +199,303 @@ const LocationInputs: React.FC<LocationInputsProps> = ({
   }, [destination])
 
   return (
-    <Card style={styles.card}>
-      <Card.Content>
-        <View style={styles.header}>
-          <Text variant="titleMedium" style={styles.title}>
-            Plan Your Route
-          </Text>
-          {isCalculatingRoute && <ActivityIndicator size="small" color="#2196F3" />}
-        </View>
+    <View style={styles.container}>
+      {/* Google Maps Style Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.menuButton}>
+          <Icon name="menu" size={24} color="#5F6368" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Directions</Text>
+        <TouchableOpacity style={styles.profileButton}>
+          <Icon name="account-circle" size={32} color="#4285F4" />
+        </TouchableOpacity>
+      </View>
 
+      {/* Search Container */}
+      <View style={styles.searchContainer}>
         {/* Origin Input */}
-        <View style={styles.inputWrapper}>
-          <View style={styles.inputContainer}>
-            <View style={styles.iconContainer}>
-              <Icon name="my-location" size={20} color="#4CAF50" />
+        <View style={styles.inputRow}>
+          <View style={styles.routeIndicator}>
+            <View style={styles.originDot} />
+            <View style={styles.routeLine} />
+          </View>
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Choose starting point"
+                value={originText}
+                onChangeText={handleOriginTextChange}
+                onFocus={() => {
+                  if (originSuggestions.length > 0) {
+                    setShowOriginSuggestions(true)
+                  }
+                }}
+                placeholderTextColor="#9AA0A6"
+              />
+              {origin && (
+                <TouchableOpacity onPress={clearOrigin} style={styles.clearButton}>
+                  <Icon name="clear" size={20} color="#9AA0A6" />
+                </TouchableOpacity>
+              )}
             </View>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Choose starting point"
-              value={originText}
-              onChangeText={handleOriginTextChange}
-              onFocus={() => {
-                if (originSuggestions.length > 0) {
-                  setShowOriginSuggestions(true)
-                }
-              }}
-              placeholderTextColor="#999"
-            />
-            {origin && (
-              <TouchableOpacity onPress={clearOrigin} style={styles.clearButton}>
-                <Icon name="clear" size={20} color="#666" />
-              </TouchableOpacity>
+
+            {/* Current Location Button */}
+            <TouchableOpacity
+              onPress={handleUseCurrentLocation}
+              style={styles.currentLocationButton}
+              disabled={!currentLocation}
+            >
+              <Icon name="my-location" size={16} color={currentLocation ? "#4285F4" : "#ccc"} />
+              <Text style={[styles.currentLocationText, !currentLocation && styles.disabled]}>Your location</Text>
+            </TouchableOpacity>
+
+            {/* Origin Suggestions */}
+            {showOriginSuggestions && originSuggestions.length > 0 && (
+              <ScrollView style={styles.suggestionsContainer} nestedScrollEnabled>
+                {originSuggestions.slice(0, 5).map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.suggestionItem}
+                    onPress={() => handleOriginSelect(suggestion)}
+                  >
+                    <Icon name="place" size={20} color="#9AA0A6" style={styles.suggestionIcon} />
+                    <View style={styles.suggestionTextContainer}>
+                      <Text style={styles.suggestionMainText} numberOfLines={1}>
+                        {suggestion.structured_formatting?.main_text || suggestion.description}
+                      </Text>
+                      <Text style={styles.suggestionSecondaryText} numberOfLines={1}>
+                        {suggestion.structured_formatting?.secondary_text || ""}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             )}
           </View>
-
-          {/* Current Location Button */}
-          <TouchableOpacity
-            onPress={handleUseCurrentLocation}
-            style={styles.currentLocationButton}
-            disabled={!currentLocation}
-          >
-            <Icon name="gps-fixed" size={16} color={currentLocation ? "#2196F3" : "#ccc"} />
-            <Text style={[styles.currentLocationText, !currentLocation && styles.disabled]}>Use current location</Text>
-          </TouchableOpacity>
-
-          {/* Origin Suggestions */}
-          {showOriginSuggestions && originSuggestions.length > 0 && (
-            <View style={styles.suggestionsContainer}>
-              {originSuggestions.slice(0, 5).map((suggestion, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.suggestionItem}
-                  onPress={() => handleOriginSelect(suggestion)}
-                >
-                  <Icon name="place" size={16} color="#666" style={styles.suggestionIcon} />
-                  <Text style={styles.suggestionText} numberOfLines={2}>
-                    {suggestion.description}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
 
         {/* Swap Button */}
         {origin && destination && (
-          <View style={styles.swapContainer}>
-            <TouchableOpacity onPress={handleSwapLocations} style={styles.swapButton}>
-              <Icon name="swap-vert" size={24} color="#2196F3" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity onPress={handleSwapLocations} style={styles.swapButton}>
+            <Icon name="swap-vert" size={20} color="#5F6368" />
+          </TouchableOpacity>
         )}
 
         {/* Destination Input */}
-        <View style={styles.inputWrapper}>
-          <View style={styles.inputContainer}>
-            <View style={styles.iconContainer}>
-              <Icon name="place" size={20} color="#F44336" />
+        <View style={styles.inputRow}>
+          <View style={styles.routeIndicator}>
+            <View style={styles.destinationDot} />
+          </View>
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Choose destination"
+                value={destinationText}
+                onChangeText={handleDestinationTextChange}
+                onFocus={() => {
+                  if (destinationSuggestions.length > 0) {
+                    setShowDestinationSuggestions(true)
+                  }
+                }}
+                placeholderTextColor="#9AA0A6"
+              />
+              {destination && (
+                <TouchableOpacity onPress={clearDestination} style={styles.clearButton}>
+                  <Icon name="clear" size={20} color="#9AA0A6" />
+                </TouchableOpacity>
+              )}
             </View>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Choose destination"
-              value={destinationText}
-              onChangeText={handleDestinationTextChange}
-              onFocus={() => {
-                if (destinationSuggestions.length > 0) {
-                  setShowDestinationSuggestions(true)
-                }
-              }}
-              placeholderTextColor="#999"
-            />
-            {destination && (
-              <TouchableOpacity onPress={clearDestination} style={styles.clearButton}>
-                <Icon name="clear" size={20} color="#666" />
-              </TouchableOpacity>
+
+            {/* Destination Suggestions */}
+            {showDestinationSuggestions && destinationSuggestions.length > 0 && (
+              <ScrollView style={styles.suggestionsContainer} nestedScrollEnabled>
+                {destinationSuggestions.slice(0, 5).map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.suggestionItem}
+                    onPress={() => handleDestinationSelect(suggestion)}
+                  >
+                    <Icon name="place" size={20} color="#9AA0A6" style={styles.suggestionIcon} />
+                    <View style={styles.suggestionTextContainer}>
+                      <Text style={styles.suggestionMainText} numberOfLines={1}>
+                        {suggestion.structured_formatting?.main_text || suggestion.description}
+                      </Text>
+                      <Text style={styles.suggestionSecondaryText} numberOfLines={1}>
+                        {suggestion.structured_formatting?.secondary_text || ""}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             )}
           </View>
-
-          {/* Destination Suggestions */}
-          {showDestinationSuggestions && destinationSuggestions.length > 0 && (
-            <View style={styles.suggestionsContainer}>
-              {destinationSuggestions.slice(0, 5).map((suggestion, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.suggestionItem}
-                  onPress={() => handleDestinationSelect(suggestion)}
-                >
-                  <Icon name="place" size={16} color="#666" style={styles.suggestionIcon} />
-                  <Text style={styles.suggestionText} numberOfLines={2}>
-                    {suggestion.description}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
+      </View>
 
-        {/* Route Status */}
-        {origin && destination && (
-          <View style={styles.routeStatus}>
-            <Icon name="route" size={16} color="#4CAF50" />
-            <Text style={styles.routeStatusText}>
-              {isCalculatingRoute ? "Calculating route..." : "Route ready for navigation"}
-            </Text>
-          </View>
-        )}
-
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <Button
-            mode="outlined"
-            onPress={() => {
-              setOriginText("")
-              setDestinationText("")
-              onOriginSelect(null)
-              onDestinationSelect(null)
-              setShowOriginSuggestions(false)
-              setShowDestinationSuggestions(false)
-            }}
-            style={styles.quickActionButton}
-            compact
-          >
-            Clear All
-          </Button>
+      {/* Route Status */}
+      {isCalculatingRoute && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#4285F4" />
+          <Text style={styles.loadingText}>Finding the best route...</Text>
         </View>
-      </Card.Content>
-    </Card>
+      )}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  card: {
-    margin: 16,
-    elevation: 4,
+  container: {
     backgroundColor: "#ffffff",
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8EAED",
   },
-  title: {
-    fontWeight: "bold",
-    color: "#212121",
+  menuButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "500",
+    color: "#3C4043",
+  },
+  profileButton: {
+    padding: 4,
+  },
+  searchContainer: {
+    padding: 16,
+    backgroundColor: "#ffffff",
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  routeIndicator: {
+    alignItems: "center",
+    marginRight: 16,
+    marginTop: 16,
+  },
+  originDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#4285F4",
+  },
+  routeLine: {
+    width: 2,
+    height: 40,
+    backgroundColor: "#E8EAED",
+    marginVertical: 4,
+  },
+  destinationDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 2,
+    backgroundColor: "#EA4335",
   },
   inputWrapper: {
-    marginBottom: 16,
+    flex: 1,
     position: "relative",
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    backgroundColor: "#F8F9FA",
+    borderRadius: 8,
+    paddingHorizontal: 16,
     paddingVertical: 4,
-    minHeight: 56,
+    minHeight: 48,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-  },
-  iconContainer: {
-    marginRight: 12,
-    width: 24,
-    alignItems: "center",
+    borderColor: "#E8EAED",
   },
   textInput: {
     flex: 1,
     fontSize: 16,
-    color: "#212121",
+    color: "#3C4043",
     paddingVertical: 12,
-    paddingHorizontal: 0,
   },
   clearButton: {
-    padding: 8,
-    marginLeft: 8,
+    padding: 4,
   },
   currentLocationButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    marginTop: 8,
+    marginTop: 4,
   },
   currentLocationText: {
     fontSize: 14,
-    color: "#2196F3",
+    color: "#4285F4",
     marginLeft: 8,
-    fontWeight: "500",
   },
   disabled: {
-    color: "#ccc",
+    color: "#9AA0A6",
+  },
+  swapButton: {
+    alignSelf: "flex-end",
+    marginRight: 16,
+    marginBottom: 8,
+    padding: 8,
+    backgroundColor: "#F8F9FA",
+    borderRadius: 20,
   },
   suggestionsContainer: {
     backgroundColor: "#ffffff",
-    borderRadius: 12,
+    borderRadius: 8,
     elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     marginTop: 4,
-    maxHeight: 250,
+    maxHeight: 200,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: "#E8EAED",
   },
   suggestionItem: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: "#F1F3F4",
   },
   suggestionIcon: {
-    marginRight: 12,
+    marginRight: 16,
   },
-  suggestionText: {
+  suggestionTextContainer: {
     flex: 1,
+  },
+  suggestionMainText: {
+    fontSize: 16,
+    color: "#3C4043",
+    marginBottom: 2,
+  },
+  suggestionSecondaryText: {
     fontSize: 14,
-    color: "#333",
+    color: "#5F6368",
   },
-  swapContainer: {
-    alignItems: "center",
-    marginVertical: 8,
-  },
-  swapButton: {
-    backgroundColor: "#e3f2fd",
-    borderRadius: 20,
-    padding: 8,
-  },
-  routeStatus: {
+  loadingContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e8f5e8",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  routeStatusText: {
-    fontSize: 14,
-    color: "#2e7d32",
-    marginLeft: 8,
-    fontWeight: "500",
-  },
-  quickActions: {
-    flexDirection: "row",
     justifyContent: "center",
-    marginTop: 16,
+    paddingVertical: 16,
+    backgroundColor: "#F8F9FA",
+    marginHorizontal: 16,
+    borderRadius: 8,
   },
-  quickActionButton: {
-    marginHorizontal: 8,
+  loadingText: {
+    marginLeft: 12,
+    fontSize: 14,
+    color: "#5F6368",
   },
 })
 
